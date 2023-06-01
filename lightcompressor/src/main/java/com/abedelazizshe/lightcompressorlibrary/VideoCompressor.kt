@@ -110,19 +110,18 @@ object VideoCompressor : CoroutineScope by MainScope() {
 
             job = launch {
 
-                val job = async { getMediaPath(context, uris[i]) }
-                val path = job.await()
-
                 val desFile = saveVideoFile(
-                    context, path, sharedStorageConfiguration,
-                    appSpecificStorageConfiguration, outputFile,
+                    context, uris[i],
+                    sharedStorageConfiguration, appSpecificStorageConfiguration,
+                    outputFile,
                     isStreamable
                 )
 
                 if (isStreamable)
                     streamableFile = saveVideoFile(
-                        context, path, sharedStorageConfiguration,
-                        appSpecificStorageConfiguration, outputFile,
+                        context, uris[i],
+                        sharedStorageConfiguration, appSpecificStorageConfiguration,
+                        outputFile,
                         null
                     )
 
@@ -179,9 +178,9 @@ object VideoCompressor : CoroutineScope by MainScope() {
     }
 
 
-    private fun saveVideoFile(
+    private suspend fun saveVideoFile(
         context: Context,
-        filePath: String?,
+        uri: Uri,
         sharedStorageConfiguration: SharedStorageConfiguration?,
         appSpecificStorageConfiguration: AppSpecificStorageConfiguration?,
         outputFile: File?,
@@ -189,62 +188,62 @@ object VideoCompressor : CoroutineScope by MainScope() {
     ): File? {
         outputFile?.let { return it }
 
-        filePath?.let {
-            val videoFile = File(filePath)
+        val job = coroutineScope { async { getMediaPath(context, uri) } }
+        val filePath = job.await()
 
-            if (sharedStorageConfiguration != null) {
-                val videoFileName = validatedFileName(
-                    sharedStorageConfiguration.videoName,
-                    isStreamable
-                )
+        val videoFile = File(filePath)
 
-                val saveLocation =
-                    when (sharedStorageConfiguration.saveAt) {
-                        SaveLocation.downloads -> {
-                            Environment.DIRECTORY_DOWNLOADS
-                        }
-                        SaveLocation.pictures -> {
-                            Environment.DIRECTORY_PICTURES
-                        }
-                        else -> {
-                            Environment.DIRECTORY_MOVIES
-                        }
+        if (sharedStorageConfiguration != null) {
+            val videoFileName = validatedFileName(
+                sharedStorageConfiguration.videoName,
+                isStreamable
+            )
+
+            val saveLocation =
+                when (sharedStorageConfiguration.saveAt) {
+                    SaveLocation.downloads -> {
+                        Environment.DIRECTORY_DOWNLOADS
                     }
-
-                if (Build.VERSION.SDK_INT >= 30) {
-                    return saveVideoInExternal(context, videoFileName, saveLocation, videoFile)
-                } else {
-                    val savePath =
-                        Environment.getExternalStoragePublicDirectory(saveLocation)
-
-                    val desFile = File(savePath, videoFileName)
-
-                    if (desFile.exists())
-                        desFile.delete()
-
-                    try {
-                        desFile.createNewFile()
-                    } catch (e: IOException) {
-                        e.printStackTrace()
+                    SaveLocation.pictures -> {
+                        Environment.DIRECTORY_PICTURES
                     }
-                    return desFile
+                    else -> {
+                        Environment.DIRECTORY_MOVIES
+                    }
                 }
+
+            if (Build.VERSION.SDK_INT >= 30) {
+                return saveVideoInExternal(context, videoFileName, saveLocation, videoFile)
             } else {
-                val videoFileName = validatedFileName(
-                    appSpecificStorageConfiguration!!.videoName,
-                    isStreamable
-                )
+                val savePath =
+                    Environment.getExternalStoragePublicDirectory(saveLocation)
 
+                val desFile = File(savePath, videoFileName)
 
-                return saveVideoInInternal(
-                    context,
-                    videoFileName,
-                    appSpecificStorageConfiguration.subFolderName,
-                    videoFile
-                )
+                if (desFile.exists())
+                    desFile.delete()
+
+                try {
+                    desFile.createNewFile()
+                } catch (e: IOException) {
+                    e.printStackTrace()
+                }
+                return desFile
             }
+        } else {
+            val videoFileName = validatedFileName(
+                appSpecificStorageConfiguration!!.videoName,
+                isStreamable
+            )
+
+
+            return saveVideoInInternal(
+                context,
+                videoFileName,
+                appSpecificStorageConfiguration.subFolderName,
+                videoFile
+            )
         }
-        return null
     }
 
     private fun saveVideoInInternal(
