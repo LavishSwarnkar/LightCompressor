@@ -67,6 +67,7 @@ object VideoCompressor : CoroutineScope by MainScope() {
         isStreamable: Boolean = false,
         sharedStorageConfiguration: SharedStorageConfiguration? = null,
         appSpecificStorageConfiguration: AppSpecificStorageConfiguration? = null,
+        outputFile: File? = null,
         configureWith: Configuration,
         listener: CompressionListener,
     ) {
@@ -79,6 +80,7 @@ object VideoCompressor : CoroutineScope by MainScope() {
             isStreamable,
             sharedStorageConfiguration,
             appSpecificStorageConfiguration,
+            outputFile,
             configureWith,
             listener,
         )
@@ -99,6 +101,7 @@ object VideoCompressor : CoroutineScope by MainScope() {
         isStreamable: Boolean,
         sharedStorageConfiguration: SharedStorageConfiguration?,
         appSpecificStorageConfiguration: AppSpecificStorageConfiguration?,
+        outputFile: File?,
         configuration: Configuration,
         listener: CompressionListener,
     ) {
@@ -112,13 +115,15 @@ object VideoCompressor : CoroutineScope by MainScope() {
 
                 val desFile = saveVideoFile(
                     context, path, sharedStorageConfiguration,
-                    appSpecificStorageConfiguration, isStreamable
+                    appSpecificStorageConfiguration, outputFile,
+                    isStreamable
                 )
 
                 if (isStreamable)
                     streamableFile = saveVideoFile(
                         context, path, sharedStorageConfiguration,
-                        appSpecificStorageConfiguration, null
+                        appSpecificStorageConfiguration, outputFile,
+                        null
                     )
 
                 desFile?.let {
@@ -179,8 +184,11 @@ object VideoCompressor : CoroutineScope by MainScope() {
         filePath: String?,
         sharedStorageConfiguration: SharedStorageConfiguration?,
         appSpecificStorageConfiguration: AppSpecificStorageConfiguration?,
+        outputFile: File?,
         isStreamable: Boolean?
     ): File? {
+        outputFile?.let { return it }
+
         filePath?.let {
             val videoFile = File(filePath)
 

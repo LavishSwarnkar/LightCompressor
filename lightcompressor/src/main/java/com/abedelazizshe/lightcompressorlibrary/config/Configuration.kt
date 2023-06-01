@@ -17,6 +17,11 @@ data class AppSpecificStorageConfiguration(
     var subFolderName: String? = null,
 )
 
+data class AppSpecificCacheStorageConfiguration(
+    var videoName: String,
+    var subFolderName: String? = null,
+)
+
 data class SharedStorageConfiguration(
     var videoName: String,
     var saveAt: SaveLocation? = null,
